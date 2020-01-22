@@ -333,7 +333,7 @@ display: none;
     }
     .trendig-product .owl-dots {
         display: none;
-    }    
+    }
     .section-ttitle h2 {
           font-size: 26px;
         }
@@ -354,7 +354,7 @@ display: none;
     .tab-menu {
       flex-direction: column;
       margin-right: 0;
-    }    
+    }
         .banner-box {
           flex: 0 0 100%;
         }
@@ -405,6 +405,13 @@ display: none;
         font-size: 20px;
         line-height: 20px;
     }
+    .primary-img{
+	padding-top: 8px;
+	margin-top: 4px;
+	height: 28rem;
+	width: 48rem;
+
+}
     .error-text > p {
         font-size: 15px;
         line-height: 21px;
@@ -517,7 +524,7 @@ display: none;
     }
     .mt-sm-45 {
         margin-top: 45px;
-    }    
+    }
 
     .mt-sm-40 {
         margin-top: 40px;
@@ -617,7 +624,7 @@ display: none;
       display: block;
       overflow-x: auto;
       width: 100%;
-    }    
+    }
 }
 
 /*=============== Some Specific issues ===============*/
@@ -633,13 +640,13 @@ display: none;
       display: block;
       padding-right: 0;
 
-    }  
+    }
     .hot-product2 .actions-primary {
       margin-bottom: 20px;
     }
     #list-view .hot-product2 .actions-primary {
       margin-bottom: 0;
-    }    
+    }
 }
 
 /*=============== Mobile Device ===============*/
@@ -659,7 +666,7 @@ display: none;
         }
         .blog-img {
           width: 100%;
-        }  
+        }
     .owl-nav div {
         display: none;
     }
