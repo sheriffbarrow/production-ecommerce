@@ -1,12 +1,9 @@
 from django.contrib import admin
-
-
 from django.contrib.auth.admin import UserAdmin as UserAdminOrig
 from django.contrib.auth.models import Group
 from django.utils.translation import ugettext_lazy as _
 from ecommerce.forms import UserCreationForm
 from .models import Item, OrderItem, Order, Payment, Coupon, Refund, Address, UserProfile, VendorSignUp
-
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
@@ -119,6 +116,13 @@ class AddressAdmin(admin.ModelAdmin):
     ]
     list_filter = ['default', 'address_type', 'country']
     search_fields = ['email', 'street_address', 'apartment_address', 'zip']
+
+class ItemAdmin(admin.ModelAdmin):
+	list_display = ['title','price','discount_price','percentage_discount','category','label','slug','timestamp','updated']
+	search_fields = ['title','description']
+	date_hierarchy = 'timestamp'
+	prepopulated_fields = {"slug": ('title',)}
+
 class VendorSignUpAdmin(admin.ModelAdmin):
     list_display = ['email','location','phone','profession','experience','verified_id']
 class OrderItemAdmin(admin.ModelAdmin):
@@ -126,7 +130,7 @@ class OrderItemAdmin(admin.ModelAdmin):
 
 
 admin.site.register(VendorSignUp, VendorSignUpAdmin)
-admin.site.register(Item)
+admin.site.register(Item, ItemAdmin)
 admin.site.register(OrderItem, OrderItemAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(Payment)
