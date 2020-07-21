@@ -1,151 +1,138 @@
 from django import forms
 from django_countries.fields import CountryField
 from django_countries.widgets import CountrySelectWidget
-from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-
-from ecommerce.models import MyUser
-
-
+from .models import Product, Vendor, VendorImage,ProductImage, CarImage,HouseImage, RentCar, RentHouse, OrderFood
 from django.contrib.auth import get_user_model
-from django.db.models import Q
-
 from django import forms
-
+from django.forms import ClearableFileInput
 User = get_user_model()
+from django.template.defaultfilters import filesizeformat
+from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
+from django.template.defaultfilters import filesizeformat
+from django.utils.translation import ugettext_lazy as _
 
-from django.contrib.auth import get_user_model
-from django.db.models import Q
+# 2.5MB - 2621440
+# 5MB - 5242880
+# 10MB - 10485760
+# 20MB - 20971520
+# 50MB - 5242880
+# 100MB 104857600
+# 250MB - 214958080
+# 500MB - 429916160
+MAX_UPLOAD_SIZE = "5242880"
 
-from django import forms
 
-User = get_user_model()
+class ContactForm(forms.Form):
+	name = forms.CharField(required=True)
+	email = forms.EmailField(required=True)
+	phone = forms.CharField(required=True)
+	duration = forms.CharField(required=True)
+	comment = forms.Textarea()
 
-class UserCreationForm(forms.ModelForm):
-	password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
-	password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
+class ProductForm(forms.ModelForm):
 
 	class Meta:
-		model = User
-		fields = ['username', 'email']
+		model = Product
+		fields = ['title','price','previous_price','percentage_discount','contact','contact2','category','region','town','locality','negotiable','description']
+		widgets = {
+			'description': forms.Textarea(attrs={'rows':3, 'cols':10}),
+		}
 
-	def clean_password(self):
-		password1 = self.cleaned_data.get('password1')
-		password2 = self.cleaned_data.get('password2')
-		if password1 and password2 and password1 != password2:
-			raise forms.ValidationError("Passwords do not match")
-		return password2
+class ProductImageForm(forms.ModelForm):
+	class Meta:
+		model = ProductImage
+		fields = ['image']
 
-	def save(self, commit=True):
-		user = super(UserCreationForm, self).save(commit=False)
-		user.set_password(self.cleaned_data['password1'])
+	def clean_file(self):
+		file= self.cleaned_data['image']
 
-		if commit:
-			user.save()
-		return user
+		try:
+			#validate content type
+			main, sub = file.content_type.split('/')
+			if not (main == 'image' and sub in ['jpeg', 'pjpeg', 'png']):
+				raise forms.ValidationError(u'Please use a JPEG or PNG image.')
 
+			#validate file size
+			if len(file) > (10000 * 1024):
+				raise forms.ValidationError(u'File size may not exceed 10M.')
 
-class UserLoginForm(forms.Form):
-	query = forms.CharField(label='Username / Email')
-	password = forms.CharField(label='Password', widget=forms.PasswordInput)
+		except AttributeError:
+			"""
+			Handles case when we are updating the user profile
+			and do not supply a new avatar
+			"""
+			pass
 
-	def clean(self, *args, **kwargs):
-		query = self.cleaned_data.get('query')
-		password = self.cleaned_data.get('password')
-		user_qs_final = User.objects.filter(
-				Q(username__iexact=query) |
-				Q(email__iexact=query)
-			).distinct()
-		if not user_qs_final.exists() and user_qs_final.count != 1:
-			raise forms.ValidationError("Invalid credentials - user does note exist")
-		user_obj = user_qs_final.first()
-		if not user_obj.check_password(password):
-			raise forms.ValidationError("credentials are not correct")
-		self.cleaned_data["user_obj"] = user_obj
-		return super(UserLoginForm, self).clean(*args, **kwargs)
+		return file
 
 
+class VendorForm(forms.ModelForm):
+	class Meta:
+		model = Vendor
+		fields = ['category','trade_name','profession','region','town','locality','service_description']
+		widgets = {
+			'service_description': forms.Textarea(attrs={'rows':3, 'cols':10}),
+		}
+
+class VendorImageForm(forms.ModelForm):
 
 
+	class Meta:
+		model = VendorImage
+		fields = ['file']
+
+	def clean_content(self):
+		content = self.cleaned_data['file']
+		content_type = content.content_type.split('/')[0]
+		if content_type in settings.CONTENT_TYPES:
+			if content._size > settings.MAX_UPLOAD_SIZE:
+				raise forms.ValidationError(_('Please keep filesize under %s. Current filesize %s') % (filesizeformat(settings.MAX_UPLOAD_SIZE), filesizeformat(content._size)))
+		else:
+			raise forms.ValidationError(_('File type is not supported'))
+		return content
+
+class RentCarForm(forms.ModelForm):
+	 class Meta:
+		 model = RentCar
+		 fields = ['brand','model','model_year','millage','manual','automatic','other','petrol',
+					'diesel','hybrid','electric','other','description','region','town','locality','contact','contact2','price','negotiable']
+		 widgets = {
+			 'description': forms.Textarea(attrs={'rows':3, 'cols':10}),
+
+		 }
+
+class CarImageForm(forms.ModelForm):
+	class Meta:
+		model = CarImage
+		fields = ['image']
 
 
+class RentHouseForm(forms.ModelForm):
+	class Meta:
+		model = RentHouse
+		fields = ['title','bed','bath','description','property','region','town','locality','contact','contact2','price','negotiable']
+		widgets = {
+			'description': forms.Textarea(attrs={'rows':3, 'cols':10}),
+		}
+
+class HouseImageForm(forms.ModelForm):
+	class Meta:
+		model = HouseImage
+		fields = ['image']
+
+class OrderFoodForm(forms.ModelForm):
+	class Meta:
+		model = OrderFood
+		fields = ['menu', 'location','gps_address','contact']
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-PAYMENT_CHOICES = (
-    ('S', 'Stripe'),
-    ('P', 'PayPal')
-)
-
-
-class CheckoutForm(forms.Form):
-    shipping_address = forms.CharField(required=False)
-    shipping_address2 = forms.CharField(required=False)
-    shipping_country = CountryField(blank_label='(select country)').formfield(
-        required=False,
-        widget=CountrySelectWidget(attrs={
-            'class': 'custom-select d-block w-100',
-        }))
-    shipping_zip = forms.CharField(required=False)
-
-    billing_address = forms.CharField(required=False)
-    billing_address2 = forms.CharField(required=False)
-    billing_country = CountryField(blank_label='(select country)').formfield(
-        required=False,
-        widget=CountrySelectWidget(attrs={
-            'class': 'custom-select d-block w-100',
-        }))
-    billing_zip = forms.CharField(required=False)
-
-    same_billing_address = forms.BooleanField(required=False)
-    set_default_shipping = forms.BooleanField(required=False)
-    use_default_shipping = forms.BooleanField(required=False)
-    set_default_billing = forms.BooleanField(required=False)
-    use_default_billing = forms.BooleanField(required=False)
-
-    payment_option = forms.ChoiceField(
-        widget=forms.RadioSelect, choices=PAYMENT_CHOICES)
-
-
-class CouponForm(forms.Form):
-    code = forms.CharField(widget=forms.TextInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Promo code',
-        'aria-label': 'Recipient\'s username',
-        'aria-describedby': 'basic-addon2'
-    }))
-
-
-class RefundForm(forms.Form):
-    ref_code = forms.CharField()
-    message = forms.CharField(widget=forms.Textarea(attrs={
-        'rows': 4
-    }))
-    email = forms.EmailField()
-
-
-class PaymentForm(forms.Form):
-    stripeToken = forms.CharField(required=False)
-    save = forms.BooleanField(required=False)
-    use_default = forms.BooleanField(required=False)
+class Quick_ServiceForm(forms.Form):
+	client_name = forms.CharField(required=True)
+	client_email = forms.EmailField(required=True)
+	number = forms.IntegerField(required=True)
+	client_comment = forms.CharField(required=True)

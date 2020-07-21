@@ -1,53 +1,170 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.views import generic
 from django.contrib.auth.forms import UserCreationForm
-from ecommerce.models import UserProfile
+from django.contrib.auth import login, authenticate, logout
+from account.forms import RegistrationForm, UserVendorAuthenticationForm, UserVendorUpdateForm, RegistrationclientForm
+from django.contrib.auth import get_user_model
+from ecommerce.models import Product, Vendor, RentCar, RentHouse, OrderFood
+from ecommerce.forms import ProductForm, VendorForm, RentCarForm, RentHouseForm, OrderFoodForm
+from django.contrib import messages
+from .import forms
+from account.models import UserVendor
+User = get_user_model()
 # Create your views here.
 
 
-
-from django.contrib.auth.models import User
-
-def registration(request):
-    if request.method == 'POST':
-        Name = request.POST['name']
-        email = request.POST['email']
-        First_Name = request.POST['FirstName']
-        Last_Name = request.POST['LastName']
-        Password1 = request.POST['pwd']
-        Password2 = request.POST['pwd-confirm']
-        user = User.objects.create_user(Name=name,email=email,First_Name=FirstName,Last_Name=LastName,Password1=pwd,Password2=pwd-confirm)
-        user.save();
-        print('user created')
-        return redirect('/')
+def registration_view(request):
+    if request.user.is_authenticated:
+        return redirect('ecommerce:home')
     else:
-        return render(request, 'ecommerce/register.html')
-def loginpage(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password =  request.POST['password']
-        post = User.objects.filter(username=username)
-        if post:
-            username = request.POST['username']
-            request.session['username'] = username
-            return redirect("profile")
+        context = {}
+        if request.POST:
+            form = RegistrationForm(request.POST)
+            if form.is_valid():
+                user = form.save()
+                email = form.cleaned_data.get('email')
+                raw_password = form.cleaned_data.get('password1')
+                messages.success(request, "Account created successfully, login now!!..")
+                #messages.success(request, f'Your order has been placed successfully our correspondent will get contact you shortly')
+                # login(request,account)
+                return redirect('account:login')
+            else:
+                messages.warning(
+                    request, "Error, unable to create account, please correct the errors below!!")
+                context['registration_form'] = form
         else:
-            return render(request, 'ecommerce/login2.html', {})
-    return render(request, 'ecommerce/login2.html', {})
+            form = RegistrationForm()
+            context['registration_form'] = form
+        return render(request, 'ecommerce/registervendor.html', context)
 
-def profile(request):
-    if request.session.has_key('username'):
-        posts = request.session['username']
-        query = User.objects.filter(username=posts)
-        return render(request, 'ecommerce/profile.html', {"query":query})
+
+def registration_client_view(request):
+    context = {}
+    if request.POST:
+        form = RegistrationclientForm(request.POST)
+        if form.is_valid():
+            form.save()
+            email = form.cleaned_data.get('email')
+            raw_password = form.cleaned_data.get('password1')
+            account = authenticate(email=email, password=raw_password)
+            # login(request,account)
+            return redirect('account:login')
+        else:
+            context['registration_form'] = form
     else:
-        return render(request, 'ecommerce/login2.html', {})
+        form = RegistrationclientForm()
+        context['registration_form'] = form
+    return render(request, 'ecommerce/client.html', context)
 
 
-def logout(request):
-    try:
-        del request.session['username']
-    except:
-     pass
-    return render(request, 'ecommerce/login2.html', {})
+def logout_view(request):
+    logout(request)
+    return redirect('/')
+
+
+def login_view(request):
+
+    context = {}
+
+    user = request.user
+    if user.is_authenticated:
+        return redirect("ecommerce:home")
+
+    if request.POST:
+        form = UserVendorAuthenticationForm(request.POST)
+        if form.is_valid():
+            email = request.POST['email']
+            password = request.POST['password']
+            user = authenticate(email=email, password=password)
+
+            if user:
+                login(request, user)
+                if 'next' in request.POST:
+                    return redirect(request.POST.get('next'))
+                else:
+                    return redirect("ecommerce:home")
+
+    else:
+        form = UserVendorAuthenticationForm()
+
+    context['login_form'] = form
+
+    # print(form)
+    return render(request, "ecommerce/login.html", context)
+
+
+def login_view_required(request):
+
+    context = {}
+
+    user = request.user
+    if user.is_authenticated:
+        return redirect("ecommerce:home")
+
+    if request.POST:
+        form = UserVendorAuthenticationForm(request.POST)
+        if form.is_valid():
+            email = request.POST['email']
+            password = request.POST['password']
+            user = authenticate(email=email, password=password)
+
+            if user:
+                login(request, user)
+                if 'next' in request.POST:
+                    return redirect(request.POST.get('next'))
+                else:
+                    return redirect("ecommerce:home")
+
+    else:
+        form = UserVendorAuthenticationForm()
+
+    context['login_form'] = form
+
+    # print(form)
+    return render(request, "ecommerce/login_required.html", context)
+
+
+def account_view(request):
+
+    if not request.user.is_authenticated:
+        return redirect("account:login")
+
+    context = {}
+    if request.POST:
+        form = UserVendorUpdateForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+
+    else:
+        form = UserVendorUpdateForm(
+            initial={
+                "email": request.user.email,
+                "username": request.user.username,
+                "contact": request.user.contact,
+                "location": request.user.location,
+                "profession": request.user.profession,
+                "experience": request.user.experience,
+            }
+        )
+
+    context['account_form'] = form
+
+    return render(request, "account/settings.html", context)
+
+
+def account_fitler(request):
+    items = Product.objects.filter(vendor=request.user).order_by('-posted_date')
+    context = {
+        'items': items,
+    }
+    return render(request, 'account/account_settings.html', context)
+
+
+def accountSettings(request):
+    customer = request.user
+
+    context = {'customer': customer,
+               }
+    return render(request, 'account/account_settings.html', context)

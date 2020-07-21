@@ -262,7 +262,7 @@ display: none;
     }
     .mobile-menu::before {
       color: #363636;
-      content: "MENU";
+      content: "ACCOUNT";
       font-size: 17px;
       font-weight: 600;
       left: 15px;
@@ -410,6 +410,8 @@ display: none;
 	margin-top: 4px;
 	height: 28rem;
 	width: 48rem;
+    object-fit: cover;
+    object-position: center center;
 
 }
     .error-text > p {
@@ -883,6 +885,8 @@ display: none;
         margin-left: 0;
         width: 100%;
         max-width: 100%;
+        object-fit: cover;
+        object-position: center center;
     }
     .sidebar-desc blockquote p,.sidebar-desc blockquote span {
       font-size: 14px;

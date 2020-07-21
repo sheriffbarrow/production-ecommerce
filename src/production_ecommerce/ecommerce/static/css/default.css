@@ -13,7 +13,7 @@ Version: 1.0;
 01. General
 02. Back to top
 03. Basic margin padding
- 
+
 ======================================
 [ End table content ]
 ======================================*/
@@ -91,7 +91,7 @@ button.close {
     display: none;
 }
 /*************************************
-Background variation set 
+Background variation set
 **************************************/
 /*colored background*/
 .white-bg{
@@ -311,7 +311,7 @@ Background variation set
 .pb-70 { padding-bottom: 70px }
 .pb-80 { padding-bottom: 80px }
 .pb-85 { padding-bottom: 85px }
-.pb-90 { padding-bottom: 90px }
+.pb-90 { padding-bottom: 50px }
 .pb-100 { padding-bottom: 100px }
 .pb-110 { padding-bottom: 110px }
 .pb-120 { padding-bottom: 120px }
@@ -349,7 +349,7 @@ Background variation set
 
 
 /***************************
-    Page section padding 
+    Page section padding
 ****************************/
 .ptb-0 { padding: 0 }
 .ptb-10 { padding: 10px 0 }
@@ -375,7 +375,7 @@ Background variation set
 .ptb-150 { padding: 150px 0 }
 
 /***************************
-    Page section margin 
+    Page section margin
 ****************************/
 .mtb-0 { margin: 0 }
 .mtb-10 { margin: 10px 0 }
@@ -399,7 +399,7 @@ Background variation set
 
 /*Opacity background*/
  .bg-opacity-black-10:before, .bg-opacity-black-20:before, .bg-opacity-black-30:before, .bg-opacity-black-40:before, .bg-opacity-black-50:before, .bg-opacity-black-60:before, .bg-opacity-black-70:before, .bg-opacity-black-80:before, .bg-opacity-black-90:before,  .bg-opacity-white-10:before,  .bg-opacity-white-20:before,  .bg-opacity-white-30:before,  .bg-opacity-white-40:before,  .bg-opacity-white-50:before,  .bg-opacity-white-60:before,  .bg-opacity-white-70:before,  .bg-opacity-white-80:before,  .bg-opacity-white-90:before{
-    content: ""; height: 100%; left: 0; position: absolute; top: 0; width: 100%; z-index: -1; 
+    content: ""; height: 100%; left: 0; position: absolute; top: 0; width: 100%; z-index: -1;
  }
  .bg-opacity-black-10:before {  background: rgba(0, 0, 0, 0.1);}
  .bg-opacity-black-20:before {  background: rgba(0, 0, 0, 0.2);}

@@ -4,309 +4,265 @@ from django.conf import settings
 from django.db.models import Sum
 from django.shortcuts import reverse
 from django_countries.fields import CountryField
-from django.contrib.auth.models import AbstractUser ,AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import User, AbstractUser ,AbstractBaseUser, BaseUserManager, PermissionsMixin
+from account.models import UserVendor,Client
+from django.db.models import F
+from django.urls import reverse
+from django.template.defaultfilters import slugify
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+import math
+from django.utils.translation import ugettext_lazy as _
+from model_utils import Choices
 # Create your models here.
-
-
+from django_resized import ResizedImageField
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 # Create your models here.
-from django.core.validators import RegexValidator
+REGION = Choices(
+		('Ashanti', _('Ashanti')),
+		('Ahafo', _('Ahafo')),
+		('Bono', _('Bono')),
+		('Bono East', _('Bono East')),
+		('Central', _('Central')),
+		('Eastern', _('Eastern')),
+		('Greater Accra', _('Greater Accra')),
+		('Northern', _('Northern')),
+		('North East', _('North East')),
+		('Oti', _('Oti')),
+		('Savannah', _('Savannah')),
+		('UE', _('Upper East')),
+		('UW', _('Upper West')),
+		('Volta', _('Volta')),
+		('Western', _('Western')),
+		('Western North', _('Western North')),
+)
 
-from django.contrib.auth.models import (
-		BaseUserManager, AbstractBaseUser
-	)
+VENDOR = Choices(
+		('CLEANING', _('CLEANING')),
+		('PLUMBING', _('PLUMBING')),
+		('ELECTRICAL', _('ELECTRICAL')),
+		('GARDEN', _('GARDEN')),
+		('TILING', _('TILING')),
+		('LAUNDRY', _('LAUNDRY')),
+		('CARPENTRY', _('CARPENTRY')),
+)
 
-USERNAME_REGEX = '^[a-zA-Z0-9.+-]*$'
+NEG = Choices(
+	('Negotiable', _('Negotiable')),
+	('Not Negotiable', _('Not Negotiable'))
+)
 
+PRODUCT = Choices(
+	('ELECTRONICS', _('ELECTRONICS')),
+	('CLOTHING', _('CLOTHING')),
+)
 
-class MyUserManager(BaseUserManager):
-	def create_user(self, username, email, password=None):
-		if not email:
-			raise ValueError('Users must have an email address')
+HOUSE = Choices(
+	('LAND', _('LAND')),
+	('APARTMENT', _('APARTMENT')),
+	('HOUSE', _('HOUSE')),
+)
 
-		user = self.model(
-					username = username,
-					email = self.normalize_email(email)
-				)
-		user.set_password(password)
-		user.save(using=self._db)
-		return user
-		# user.password = password # bad - do not do this
-
-	def create_superuser(self, username, email, password=None):
-		user = self.create_user(
-				username, email, password=password
-			)
-		user.is_admin = True
-		user.is_staff = True
-		user.save(using=self._db)
-		return user
-
-
-
-class MyUser(AbstractBaseUser):
-	username = models.CharField(
-					max_length=300,
-					validators = [
-						RegexValidator(regex = USERNAME_REGEX,
-										message='Username must be alphanumeric or contain numbers',
-										code='invalid_username'
-							)],
-					unique=True
-				)
-	email = models.EmailField(
-			max_length=255,
-			unique=True,
-			verbose_name='email address'
-		)
-	is_admin = models.BooleanField(default=False)
-	is_staff = models.BooleanField(default=False)
-
-	objects = MyUserManager()
-
-	USERNAME_FIELD = 'username'
-	REQUIRED_FIELDS = ['email']
-
-	def __str__(self):
-		return self.email
-
-	def get_short_name(self):
-		# The user is identified by their email address
-		return self.email
-
-
-	def has_perm(self, perm, obj=None):
-		"Does the user have a specific permission?"
-		# Simplest possible answer: Yes, always
-		return True
-
-	def has_module_perms(self, app_label):
-		"Does the user have permissions to view the app `app_label`?"
-		# Simplest possible answer: Yes, always
-		return True
-
-
-CATEGORY_CHOICES = (
-    ('S', 'Shirt'),
-    ('SW', 'Sport wear'),
-    ('OW', 'Outwear')
+CAR = Choices(
+	('AUTOMOBILE', _('AUTOMOBILE')),
 )
 
 LABEL_CHOICES = (
-    ('P', 'primary'),
-    ('S', 'secondary'),
-    ('D', 'danger')
+	('P', 'primary'),
+	('S', 'secondary'),
+	('D', 'danger')
 )
 
-ADDRESS_CHOICES = (
-    ('B', 'Billing'),
-    ('S', 'Shipping'),
-)
 
 Image_Folder="media/"
 #student_images = " media/student_photos"
 #images = FileSystemStorage(location='/media/profile_photos')
 
-class Teacher(models.Model):
-	firstName=models.CharField(max_length=50)
-	lastName=models.CharField(max_length=50)
-	emailId=models.EmailField(blank=False,null=False,primary_key=True)
-	contactNo=models.CharField(max_length=10)
-	password=models.CharField(max_length=50)
-	image = models.ImageField(upload_to=Image_Folder, null = True)
-
-	def image_tag(self):
-		  return u'<img src="/media/%s" width="100px" height="100px"/>' % self.image
-	image_tag.short_description = 'Item Image'
-	image_tag.allow_tags = True
+class Quick_Service(models.Model):
+	options = models.CharField(max_length=255)
+	description = models.TextField(blank=True, null=None)
 
 	def __str__(self):
-		return "%s %s %s"%(self.firstName,self.lastName,self.emailId)
+		return self.options
 
-	class Admin:
-		pass
+class Region(models.Model):
+	region = models.CharField(max_length=255)
 
+	def __str__(self):
+		return self.region
 
+class profile(models.Model):
+	email = models.OneToOneField(UserVendor, on_delete=models.CASCADE)
+	contact = models.IntegerField(null=True, blank=True)
+	username = models.CharField(max_length=30)
+	location = models.CharField(max_length=30)
+	profession = models.CharField(max_length=30)
+	experience = models.CharField(max_length=30)
+	verified_id = models.CharField(max_length=255)
+	profile_image = models.ImageField(upload_to='profile_pictures/', blank=True,null=True)
 
-class VendorSignUp(models.Model):
-    email = models.EmailField(max_length=255,primary_key=True)
-    phone = models.IntegerField()
-    location = models.CharField(max_length=255)
-    profession = models.CharField(max_length=255)
-    experience = models.CharField(max_length=255)
-    verified_id = models.CharField(max_length=255)
-    password = models.CharField(max_length=50)
-    image = models.ImageField(upload_to='media/vendor/', null=True)
-
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    date_of_birth = models.DateField(null=True)
-    stripe_customer_id = models.CharField(max_length=50, blank=True, null=True)
-    one_click_purchasing = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.user.username
+	def __str__(self):
+		return self.username
 
 
-class Item(models.Model):
-    title = models.CharField(max_length=100)
-    price = models.DecimalField(decimal_places=2, max_digits=100, default=0.00)
-    discount_price = models.DecimalField(decimal_places=2, max_digits=100,null=True,blank=True)
-    percentage_discount = models.CharField(max_length=255, null=True,blank=True)
-    category = models.CharField(choices=CATEGORY_CHOICES, max_length=2)
-    label = models.CharField(choices=LABEL_CHOICES, max_length=1)
-    slug = models.SlugField(unique=True)
-    timestamp = models.DateTimeField(auto_now_add=True, auto_now=False)
-    updated = models.DateTimeField(auto_now_add=False,auto_now=True)
-    description = models.TextField()
-    image = models.ImageField()
+class Vendor(models.Model):
+	vendor_pk = models.AutoField(primary_key=True)
+	vendor = models.ForeignKey(UserVendor,on_delete=models.CASCADE)
+	category = models.CharField(choices=VENDOR, default='PLUMBING', max_length=30)
+	trade_name = models.CharField(max_length=255)
+	profession = models.CharField(max_length=255)
+	region = models.CharField(choices=REGION, default='Greater Accra', max_length=20,)
+	town = models.CharField(max_length=100, blank=True, null=True)
+	locality = models.CharField(max_length=255)
+	service_description = models.TextField(max_length=255,help_text='please be precise')
+	date = models.DateTimeField(auto_now_add=True, auto_now=False)
 
-    def __str__(self):
-        return self.title
+	def first_image(self):
+		return self.images.first()
 
-    def __str__(self):
-        return self.title
+	def get_absolute_url(self):
+		return reverse('ecommerce:detail', kwargs={'vendor_pk': self.vendor_pk})
 
-    class Meta:
-        unique_together = ('title','slug')
+	def __str__(self):
+		return self.trade_name
 
-    def get_absolute_url(self):
-        return reverse("ecommerce:product", kwargs={
-            'slug': self.slug
-        })
+	class Meta:
+		ordering = ['-date']
 
-    def get_add_to_cart_url(self):
-        return reverse("ecommerce:add-to-cart", kwargs={
-            'slug': self.slug
-        })
-
-    def get_remove_from_cart_url(self):
-        return reverse("ecommerce:remove-from-cart", kwargs={
-            'slug': self.slug
-        })
+class VendorImage(models.Model):
+	file = ResizedImageField(size=[1280, 720], quality=75,upload_to='vendor/images/', blank=True, null=True)
+	vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='images')
+	date_posted = models.DateTimeField(auto_now_add=True, auto_now=False)
 
 
-class OrderItem(models.Model):
-    email = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
-    ordered = models.BooleanField(default=False)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
+	class Meta:
+		ordering = ['-date_posted']
 
-    def __str__(self):
-        return f"{self.quantity} of {self.item.title}"
-
-    def get_total_item_price(self):
-        return self.quantity * self.item.price
-
-    def get_total_discount_item_price(self):
-        return self.quantity * self.item.discount_price
-
-    def get_amount_saved(self):
-        return self.get_total_item_price() - self.get_total_discount_item_price()
-
-    def get_final_price(self):
-        if self.item.discount_price:
-            return self.get_total_discount_item_price()
-        return self.get_total_item_price()
+class Product(models.Model):
+	item_pk = models.AutoField(primary_key=True)
+	vendor = models.ForeignKey(UserVendor, on_delete=models.CASCADE)
+	title = models.CharField(max_length=100)
+	price = models.DecimalField(decimal_places=2, max_digits=100, default=0.00)
+	previous_price = models.DecimalField(decimal_places=2, max_digits=100,default=0.00)
+	percentage_discount = models.CharField(help_text="Do not add the '%' sign",max_length=255, default=0.00)
+	contact = models.PositiveIntegerField()
+	contact2 = models.PositiveIntegerField()
+	posted_date = models.DateTimeField(auto_now_add=True, auto_now=False)
+	region = models.CharField(max_length=20,choices=REGION, default='Greater Accra')
+	category = models.CharField(choices=PRODUCT, default='ELECTRONICS', max_length=50)
+	town = models.CharField(max_length=100, blank=True, null=True)
+	locality = models.CharField(max_length=255)
+	negotiable = models.CharField(max_length=255,choices=NEG, default='Negotiable')
+	description = models.TextField(max_length=300, help_text='please be precise')
 
 
 
-class Order(models.Model):
-    email = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
-    ref_code = models.CharField(max_length=20, blank=True, null=True)
-    items = models.ManyToManyField(OrderItem)
-    start_date = models.DateTimeField(auto_now_add=True)
-    ordered_date = models.DateTimeField()
-    ordered = models.BooleanField(default=False)
-    shipping_address = models.ForeignKey(
-        'Address', related_name='shipping_address', on_delete=models.SET_NULL, blank=True, null=True)
-    billing_address = models.ForeignKey(
-        'Address', related_name='billing_address', on_delete=models.SET_NULL, blank=True, null=True)
-    payment = models.ForeignKey(
-        'Payment', on_delete=models.SET_NULL, blank=True, null=True)
-    coupon = models.ForeignKey(
-        'Coupon', on_delete=models.SET_NULL, blank=True, null=True)
-    being_delivered = models.BooleanField(default=False)
-    received = models.BooleanField(default=False)
-    refund_requested = models.BooleanField(default=False)
-    refund_granted = models.BooleanField(default=False)
-
-    '''
-    1. Item added to cart
-    2. Adding a billing address
-    (Failed checkout)
-    3. Payment
-    (Preprocessing, processing, packaging etc.)
-    4. Being delivered
-    5. Received
-    6. Refunds
-    '''
-
-    def __str__(self):
-        return self.user.username
-
-    def get_total(self):
-        total = 0
-        for order_item in self.items.all():
-            total += order_item.get_final_price()
-        if self.coupon:
-            total -= self.coupon.amount
-        return total
+	def first_product_image(self):
+		return self.productimages.first()
 
 
-class Address(models.Model):
-    email = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE)
-    street_address = models.CharField(max_length=100)
-    apartment_address = models.CharField(max_length=100)
-    country = CountryField(multiple=False)
-    zip = models.CharField(max_length=100)
-    address_type = models.CharField(max_length=1, choices=ADDRESS_CHOICES)
-    default = models.BooleanField(default=False)
+	def __str__(self):
+		return self.title
 
-    def __str__(self):
-        return self.user.username
+	def get_absolute_url(self):
+		return reverse('ecommerce:product-details' , kwargs={'item_pk': self.item_pk})
 
-    class Meta:
-        verbose_name_plural = 'Addresses'
+	class Meta:
+		ordering = ['-posted_date']
 
 
-class Payment(models.Model):
-    stripe_charge_id = models.CharField(max_length=50)
-    email = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.SET_NULL, blank=True, null=True)
-    amount = models.DecimalField(decimal_places=2, max_digits=100, default=0.00)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.user.username
+class ProductImage(models.Model):
+	image = ResizedImageField(size=[1280, 720], quality=75,upload_to='product/images/', blank=True, null=True)
+	vendor = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='productimages')
 
 
-class Coupon(models.Model):
-    code = models.CharField(max_length=15)
-    amount = models.FloatField()
-
-    def __str__(self):
-        return self.code
 
 
-class Refund(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    reason = models.TextField()
-    accepted = models.BooleanField(default=False)
-    email = models.EmailField()
+class RentCar(models.Model):
+	vendor = models.ForeignKey(UserVendor, on_delete=models.CASCADE)
+	brand = models.CharField(help_text='example: Toyota,Benz,etc.' ,max_length=255)
+	model = models.CharField(help_text='example: corolla',max_length=255)
+	model_year = models.PositiveIntegerField()
+	millage = models.CharField(max_length=255, blank=True, null=True)
+	manual = models.BooleanField()
+	automatic = models.BooleanField()
+	other = models.BooleanField()
+	petrol = models.BooleanField()
+	diesel = models.BooleanField()
+	hybrid = models.BooleanField()
+	electric = models.BooleanField()
+	other = models.BooleanField()
+	description = models.TextField(help_text='please be precise')
+	region = models.CharField(max_length=20,choices=REGION, default='Greater Accra')
+	town = models.CharField(max_length=100, blank=True, null=True)
+	locality = models.CharField(max_length=255)
+	contact = models.PositiveIntegerField()
+	contact2 = models.PositiveIntegerField()
+	price = models.DecimalField(decimal_places=2, max_digits=100, default=0.00)
+	negotiable = models.CharField(max_length=255,choices=NEG, default='Negotiable')
+	pub_date = models.DateTimeField(auto_now_add=True, auto_now=False)
 
-    def __str__(self):
-        return f"{self.pk}"
+	def first_car_image(self):
+		return self.carimages.first()
+
+	def __str__(self):
+		return self.brand
+
+	def get_absolute_url(self):
+		return reverse('ecommerce:cardetail' , kwargs={'pk': self.id})
+
+class CarImage(models.Model):
+	image = ResizedImageField(size=[1280, 720], quality=75,upload_to='car/images/', blank=True, null=True)
+	vendor = models.ForeignKey(RentCar, on_delete=models.CASCADE, related_name='carimages')
 
 
-def userprofile_receiver(sender, instance, created, *args, **kwargs):
-    if created:
-        userprofile = UserProfile.objects.create(user=instance)
+class RentHouse(models.Model):
+	vendor = models.ForeignKey(UserVendor, on_delete=models.CASCADE)
+	title = models.CharField(max_length=255)
+	bed = models.PositiveIntegerField(help_text='Number of beds')
+	bath = models.PositiveIntegerField(help_text='Number washrooms')
+	description = models.TextField(max_length=50, help_text='please be precise')
+	region = models.CharField(max_length=20,choices=REGION, default='Greater Accra')
+	property = models.CharField(max_length=20,choices=HOUSE, default='APARTMENT')
+	town = models.CharField(max_length=100, blank=True, null=True)
+	locality = models.CharField(max_length=255)
+	contact = models.PositiveIntegerField()
+	contact2 = models.PositiveIntegerField()
+	price = models.DecimalField(decimal_places=2, max_digits=100, default=0.00)
+	negotiable = models.CharField(max_length=255,choices=NEG, default='Negotiable')
+	post_date = models.DateTimeField(auto_now_add=True, auto_now=False)
+
+	def first_house_image(self):
+		return self.houseimages.first()
+
+	def __str__(self):
+		return self.location
+
+	def get_absolute_url(self):
+		return reverse('ecommerce:housedetail' , kwargs={'pk': self.id})
 
 
-post_save.connect(userprofile_receiver, sender=settings.AUTH_USER_MODEL)
+class HouseImage(models.Model):
+	image = ResizedImageField(size=[1280, 720], quality=75,upload_to='house/images/', blank=True, null=True)
+	vendor = models.ForeignKey(RentHouse, on_delete=models.CASCADE, related_name='houseimages')
+
+
+class OrderFood(models.Model):
+	vendor = models.ForeignKey(UserVendor, on_delete=models.CASCADE)
+	menu = models.CharField(max_length=255)
+	location = models.CharField(max_length=255)
+	gps_address = models.CharField(max_length=255, blank=True, null='N/A')
+	contact = models.CharField(max_length=255)
+	time_orderd = models.DateTimeField(auto_now_add=True, auto_now=False)
+	is_delivered = models.BooleanField(default=False)
+
+	def __str__(self):
+		return self.location
+
+class FoodImage(models.Model):
+	foodimage = models.ImageField(upload_to='food/images/', blank=True, null=True)
+	food = models.ForeignKey(OrderFood, on_delete=models.CASCADE)

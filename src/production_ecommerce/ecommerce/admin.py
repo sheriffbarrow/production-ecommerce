@@ -1,140 +1,35 @@
-from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as UserAdminOrig
-from django.contrib.auth.models import Group
-from django.utils.translation import ugettext_lazy as _
-from ecommerce.forms import UserCreationForm
-from .models import Item, OrderItem, Order, Payment, Coupon, Refund, Address, UserProfile, VendorSignUp
-from django import forms
-from django.contrib import admin
-from django.contrib.auth.models import Group
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
-
+from ecommerce.models import *
 from django.contrib import admin
 
-from django.contrib.auth.models import Group
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+class Product_Admin(admin.ModelAdmin):
+    list_display = ['vendor','title','price', 'previous_price','percentage_discount','contact','contact2','region','town','locality','posted_date','negotiable']
 
-from .forms import UserCreationForm
-from .models import MyUser
+class Vendor_Admin(admin.ModelAdmin):
+    list_display = ['vendor','category', 'trade_name','profession','region','town','locality','date']
 
-# Register your models here.
+class VendorImage_Admin(admin.ModelAdmin):
+    list_display = ['file']
 
-class UserAdmin(BaseUserAdmin):
-	add_form = UserCreationForm
+class RentCar_Admin(admin.ModelAdmin):
+    list_display = ['vendor','brand','model','model_year','manual','automatic','petrol','diesel','region','town','locality','contact','contact2']
 
-	list_display = ('username','email','is_admin')
-	list_filter = ('is_admin',)
+class RentHouse_Admin(admin.ModelAdmin):
+    list_display = ['vendor','bed','bath','region','town','locality','description','contact']
 
-	fieldsets = (
-			(None, {'fields': ('username','email','password')}),
-			('Permissions', {'fields': ('is_admin',)})
-		)
-	search_fields = ('username','email')
-	ordering = ('username','email')
-
-	filter_horizontal = ()
+class OrderFood_Admin(admin.ModelAdmin):
+    list_display = ['menu','location','contact','time_orderd','is_delivered']
+    list_editable = ['is_delivered']
 
 
-admin.site.register(MyUser, UserAdmin)
-
-admin.site.unregister(Group)
-
-
-
-def make_refund_accepted(modeladmin, request, queryset):
-    queryset.update(refund_requested=False, refund_granted=True)
-
-
-make_refund_accepted.short_description = 'Update orders to refund granted'
-
-
-
-
-
-
-class UserAdmin(UserAdminOrig):
-    readonly_fields = ('last_login', 'date_joined')
-    list_display = ('email', 'first_name', 'last_name', 'is_staff')
-    list_filter = ('is_staff', 'is_active', 'member')
-    fieldsets = (
-        (None, {'fields': ('email', 'password', 'last_login', 'date_joined')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name',)}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser')}),
-    )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2'),
-        }),
-    )
-    ordering = ('email',)
-    add_form = UserCreationForm
-
-
-
-class OrderAdmin(admin.ModelAdmin):
-    list_display = ['email',
-                    'ordered',
-                    'being_delivered',
-                    'received',
-                    'refund_requested',
-                    'refund_granted',
-                    'shipping_address',
-                    'billing_address',
-                    'payment',
-                    'coupon'
-                    ]
-    list_display_links = [
-        'email',
-        'shipping_address',
-        'billing_address',
-        'payment',
-        'coupon'
-    ]
-    list_filter = ['ordered',
-                   'being_delivered',
-                   'received',
-                   'refund_requested',
-                   'refund_granted']
-    search_fields = [
-        'user__username',
-        'ref_code'
-    ]
-    actions = [make_refund_accepted]
-
-
-class AddressAdmin(admin.ModelAdmin):
-    list_display = [
-        'email',
-        'street_address',
-        'apartment_address',
-        'country',
-        'zip',
-        'address_type',
-        'default'
-    ]
-    list_filter = ['default', 'address_type', 'country']
-    search_fields = ['email', 'street_address', 'apartment_address', 'zip']
-
-class ItemAdmin(admin.ModelAdmin):
-	list_display = ['title','price','discount_price','percentage_discount','category','label','slug','timestamp','updated']
-	search_fields = ['title','description']
-	date_hierarchy = 'timestamp'
-	prepopulated_fields = {"slug": ('title',)}
-
-class VendorSignUpAdmin(admin.ModelAdmin):
-    list_display = ['email','location','phone','profession','experience','verified_id']
-class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['email','ordered','item','quantity']
-
-
-admin.site.register(VendorSignUp, VendorSignUpAdmin)
-admin.site.register(Item, ItemAdmin)
-admin.site.register(OrderItem, OrderItemAdmin)
-admin.site.register(Order, OrderAdmin)
-admin.site.register(Payment)
-admin.site.register(Coupon)
-admin.site.register(Refund)
-admin.site.register(Address, AddressAdmin)
-admin.site.register(UserProfile)
+admin.site.register(profile)
+admin.site.register(Product, Product_Admin)
+admin.site.register(Vendor, Vendor_Admin)
+admin.site.register(VendorImage,VendorImage_Admin)
+admin.site.register(Quick_Service)
+admin.site.register(RentCar, RentCar_Admin)
+admin.site.register(RentHouse, RentHouse_Admin)
+admin.site.register(OrderFood,  OrderFood_Admin)
+admin.site.register(FoodImage)
+admin.site.register(HouseImage)
+admin.site.register(CarImage)
+admin.site.register(ProductImage)

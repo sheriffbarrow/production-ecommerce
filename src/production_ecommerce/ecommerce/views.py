@@ -1,8 +1,7 @@
-from django.shortcuts import render, HttpResponseRedirect,redirect,HttpResponse
+from django.shortcuts import render, HttpResponseRedirect, redirect, HttpResponse
 from django.contrib.auth.models import User, auth
 from django.views import generic
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
@@ -11,151 +10,476 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, DetailView, View
 from django.shortcuts import redirect
 from django.utils import timezone
-from .forms import CheckoutForm, CouponForm, RefundForm, PaymentForm
-from .models import Item, OrderItem, Order, Address, Payment, Coupon, Refund, UserProfile, Teacher
-
+from ecommerce.forms import ContactForm, ProductForm, Quick_ServiceForm, VendorForm, VendorImageForm, HouseImageForm, CarImageForm, RentCarForm, ProductImageForm, RentHouseForm, OrderFoodForm
+from django.views.generic import TemplateView
+from .import forms
 from django.contrib.auth import login, authenticate
-
-import random
-import string
-import stripe
-#stripe.api_key = settings.STRIPE_SECRET_KEY
-
-# Create your views here.
-
-
+from django.contrib.auth.decorators import login_required
+from ecommerce.models import Vendor, VendorImage, Product, ProductImage, Quick_Service, FoodImage, CarImage, HouseImage, RentCar, RentHouse
+from django.contrib.messages.views import SuccessMessageMixin
+from django.views.generic.edit import CreateView
+from django.forms import modelformset_factory
+from django.conf import settings
+from django.core import serializers
+from account.models import UserVendor
+from django.core.mail import send_mail, EmailMessage
+from django.conf import settings
+from django import template
+from django.template.loader import get_template
+from django.contrib import messages
+import json
 
 
 def create_ref_code():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=20))
 
-from django.contrib.auth.models import User
+
+def tr(request):
+    return render(request, 'ecommerce/base2.html')
 
 
-def loginpage(request):
+class Form_view(TemplateView):
+    template_name = 'ecommerce/sell.html'
+
+    def get(self, request):
+        form = ProductForm()
+        return render(request, self.template_name, {'form': form})
+
+
+class HomeView(ListView):
+    model = Product
+    template_name = 'ecommerce/index.html'
+    context_object_name = 'items'
+    ordering = ['-posted_date']
+
+
+def account_fitler(request):
+    items = Product.objects.filter(vendor=request.user).order_by('-posted_date')
+    context = {
+        'items': items,
+    }
+    return render(request, 'account/account_settings.html', context)
+
+
+def slider(request):
+    # change the time field in all models to posted date for uniformitty
+    items = Product.objects.all()[:8]
+    slides = Vendor.objects.all().order_by('-date')[:15]
+    vendor = Vendor.objects.all().order_by('-date')
+    cars = RentCar.objects.all().order_by('-pub_date')[:8]
+    house = RentHouse.objects.all().order_by('-post_date')[:8]
+    context = {
+        'house': house,
+        'cars': cars,
+        'slides': slides,
+        'items': items,
+        'vendor': vendor,
+    }
+    return render(request, "ecommerce/index.html", context)
+
+
+def any_view(request):
+    posts = Article.objects.all().order_by("-pub_date")[:5]
+    return render(request, "show/temp.html", {'posts': posts})
+
+
+class SellMessage(SuccessMessageMixin, CreateView):
+    template_name = 'ecommerce/sell.html'
+    form_class = ProductForm
+    success_url = 'ecommerce:home'
+    seccess_message = 'be ready to meet your buyers soon!'
+
+
+class VendorView(ListView):
+    model = Vendor
+    template_name = 'ecommerce/index.html'
+    paginate_by = 10
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.all()
+
+
+@login_required(login_url='/account/login-required/')
+def sell(request):
     if request.method == 'POST':
-        email = request.POST['email']
-        password =  request.POST['password']
-        post = User.objects.filter(username=username)
-        if post:
-            username = request.POST['username']
-            request.session['username'] = username
-            return redirect("profile")
+        form = ProductForm(request.POST)
+        imageform = forms.ProductImageForm(request.POST, request.FILES)
+        img = request.FILES.getlist('productimages')
+        if form.is_valid() and imageform.is_valid():
+            instance = form.save(commit=False)
+            instance.vendor = request.user
+            instance.save()
+            for f in img:
+                image_instance = ProductImage(image=f, vendor=instance)
+                image_instance.save()
+            messages.success(request, "Product uploaded successfully and it's ready for purchase!!")
         else:
-            return render(request, 'ecommerce/login.html', {})
-    return render(request, 'ecommerce/register.html', {})
+            messages.error(request, "Error!!, due to internal error or internet connectivity")
+            form = VendorForm()
+            imageform = ProductImageForm()
+    return render(request, 'ecommerce/sell.html', {'form': ProductForm(), 'imageform': ProductImageForm()})
 
 
-def logout(request):
-    try:
-        del request.session['username']
-    except:
-     pass
-    return render(request, 'ecommerce/login.html', {})
+@login_required(login_url='/account/login-required/')
+def vendor_sell(request):
+    if request.method == 'POST':
+        form = VendorForm(request.POST)
+        file_form = forms.VendorImageForm(request.POST, request.FILES)
+        files = request.FILES.getlist('images')
+        if form.is_valid() and file_form.is_valid():
+            instance = form.save(commit=False)
+            instance.vendor = request.user
+            instance.save()
+            for f in files:
+                file_instance = VendorImage(file=f, vendor=instance)
+                file_instance.save()
+            messages.success(request, "Vendor created successfully, Good luck...!!")
+        else:
+            messages.error(request, "Error, due to internal or internet connectivity!!")
+            form = VendorForm()
+            file_form = VendorImageForm()
+    return render(request, 'ecommerce/vendor_profile.html', {'form': VendorForm(), 'file_form': VendorImageForm()})
+
+
+@login_required(login_url='/account/login-required/')
+def vendor_sell_multiple(request):
+    # number of images to be allowed
+    ImageFormSet = modelformset_factory(VendorImage, fields=('file',), extra=5)
+    if request.method == "POST":
+        form = VendorForm(request.POST)
+        formset = ImageFormSet(request.POST or None, request.FILES or None)
+        if form.is_valid() and formset.is_valid():
+            vendor = form.save(commit=False)
+            vendor.vendor = request.user
+            vendor.save()
+            for f in formset:
+                try:
+                    photo = VendorImage(vendor=vendor, file=f.cleaned_data['file'])
+                    photo.save()
+                except Exception as e:
+                    break
+            messages.success(request, 'succeffuly')
+            return redirect('ecommerce:vendor_options')
+            # this helps to not crash if the user
+            # do not upload up to the max.
+    else:
+        form = VendorForm()
+        formset = ImageFormSet(queryset=VendorImage.objects.none())
+        context = {
+            'form': form, 'formset': formset,
+        }
+    return render(request, 'ecommerce/vendor_profile.html', {'form': form, 'formset': formset})
+
+
+@login_required(login_url='/account/login-required/')
+def rent_car_multiple(request):
+    # number of images to be allowed
+    ImageFormSet = modelformset_factory(CarImage, fields=('image',), extra=5)
+    if request.method == "POST":
+        form = RentCarForm(request.POST)
+        formset = ImageFormSet(request.POST or None, request.FILES or None)
+        if form.is_valid() and formset.is_valid():
+            vendor = form.save(commit=False)
+            vendor.vendor = request.user
+            vendor.save()
+            for f in formset:
+                try:
+                    photo = CarImage(vendor=vendor, image=f.cleaned_data['image'])
+                    photo.save()
+                except Exception as e:
+                    break
+            messages.success(request, 'succeffuly')
+            return redirect('ecommerce:home')
+            # this helps to not crash if the user
+            # do not upload up to the max.
+    else:
+        form = RentCarForm()
+        formset = ImageFormSet(queryset=CarImage.objects.none())
+        context = {
+            'form': form, 'formset': formset,
+        }
+    return render(request, 'ecommerce/rent_car.html', {'form': form, 'formset': formset})
+
+
+@login_required(login_url='/account/login-required/')
+def rent_car(request):
+    if request.method == 'POST':
+        form = RentCarForm(request.POST)
+        carimageform = forms.CarImageForm(request.POST, request.FILES)
+        img = request.FILES.getlist('carimages')
+        if form.is_valid() and carimageform.is_valid():
+            instance = form.save(commit=False)
+            instance.vendor = request.user
+            instance.save()
+            for f in img:
+                image_instance = CarImage(image=f, vendor=instance)
+                image_instance.save()
+            messages.success(
+                request, "Your car has been successfully uploaded and it's ready for buyers!!")
+        else:
+            form = RentCarForm()
+            carimageform = CarImageForm()
+    return render(request, 'ecommerce/rent_car.html', {'form': RentCarForm(), 'carimageform': CarImageForm()})
+
+
+@login_required(login_url='/account/login-required/')
+def rent_house(request):
+    if request.method == 'POST':
+        form = RentHouseForm(request.POST)
+        houseimageform = forms.HouseImageForm(request.POST, request.FILES)
+        img = request.FILES.getlist('houseimages')
+        if form.is_valid() and houseimageform.is_valid():
+            instance = form.save(commit=False)
+            instance.vendor = request.user
+            instance.save()
+            for f in img:
+                image_instance = HouseImage(image=f, vendor=instance)
+                image_instance.save()
+            messages.success(
+                request, "Your house/apartments has been successfully uploaded and it's ready for buyers!!")
+        else:
+            form = RentHouseForm()
+            carimageform = HouseImageForm()
+    return render(request, 'ecommerce/rent_house.html', {'form': RentHouseForm(), 'houseimageform': HouseImageForm()})
+
+
+@login_required(login_url='/account/login-required/')
+def food(request):
+    if request.method == 'POST':
+        form = forms.OrderFoodForm(request.POST)
+        if form.is_valid():
+            instance = form.save(commit=False)
+            instance.vendor = request.user
+            instance.save()
+            # save to db
+            return redirect('ecommerce:home')
+    else:
+        form = forms.OrderFoodForm()
+    return render(request, 'ecommerce/food.html', {'form': form})
+
+
+class Plumber(ListView):
+    model = Vendor
+    template_name = 'ecommerce/plumbing.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='PLUMBING')
+
+
+class Electrical(ListView):
+    model = Vendor
+    template_name = 'ecommerce/electrical.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='ELECTRICAL')
+
+
+class Cleaning(ListView):
+    model = Vendor
+    template_name = 'ecommerce/cleaning.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='CLEANING')
+
+
+class Garden(ListView):
+    model = Vendor
+    template_name = 'ecommerce/garden.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='GARDEN')
+
+
+class Tilin(ListView):
+    model = Vendor
+    template_name = 'ecommerce/tilin.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='TILING')
+
+
+class Laundry(ListView):
+    model = Vendor
+    template_name = 'ecommerce/laundry.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='LAUNDRY')
+
+
+class Carpentry(ListView):
+    model = Vendor
+    template_name = 'ecommerce/carpentry.html'
+    context_object_name = 'vendor'
+
+    def get_queryset(self):
+        return Vendor.objects.filter(category__iexact='CARPENTRY')
+
+
+class ServiceDetail(DetailView):
+    model = Vendor
+    template_name = 'ecommerce/plumber-detail.html'
+    context_object_name = 'detail'
+    pk_url_kwarg = 'vendor_pk'
+
+    def get_queryset(self):
+        return Vendor.objects.all()
+
+
+class CarDetail(DetailView):
+    model = RentCar
+    template_name = 'ecommerce/cardetails.html'
+    context_object_name = 'cardetail'
+    pk_url_kwarg = 'pk'
+
+    def get_queryset(self):
+        return RentCar.objects.all()
+
+
+class HouseDetail(DetailView):
+    model = RentHouse
+    template_name = 'ecommerce/housedetails.html'
+    context_object_name = 'housedetail'
+    pk_url_kwarg = 'pk'
+
+    def get_queryset(self):
+        return RentHouse.objects.all()
+
+
+def send_mail(request):
+    if not request.user.is_authenticated:
+        return redirect("account:login")
+    Contact_Form = ContactForm
+    if request.method == 'POST':
+        form = Contact_Form(request.POST)
+        if form.is_valid():
+            name = request.POST.get('name')
+            service = request.POST.get('service')
+            email = request.POST.get('email')
+            phone = request.POST.get('phone')
+            duration = request.POST.get('duration')
+            comment = request.POST.get('comment')
+
+            template = get_template('ecommerce/contact_form.txt')
+            context = {
+                'name': name,
+                'service': service,
+                'email': email,
+                'phone': phone,
+                'duration': duration,
+                'comment': comment,
+            }
+
+            content = template.render(context)
+            email = EmailMessage(
+                "Request for Service",
+                content,
+                "company name" + '',
+                ['farmcartt@gmail.com'],
+                headers={'Reply to': email}
+            )
+            email.send()
+            messages.success(
+                request, "Request made successfuly, our correspondent will contact you shortly..!!")
+        else:
+            messages.error(request, "Error!! Check your internet connection and try again!!..")
+            form = Contact_Form(
+                initial={
+                    'email': request.user.email,
+                    'client-name': request.detail.username,
+                    'name': request.user.trade_name,
+                }
+            )
+    return render(request, 'ecommerce/contact.html', {'form': Contact_Form})
+
+
+class ProductDetail(DetailView):
+    model = Product
+    template_name = 'ecommerce/product.html'
+    context_object_name = 'details'
+    pk_url_kwarg = 'item_pk'
+
+
+class Shop(ListView):
+    model = Product
+    template_name = 'ecommerce/shop.html'
+    context_object_name = 'item'
+    ordering = ['-posted_date']
+
+
+def electrical(request):
+    return render(request, 'ecommerce/electrical.html')
+
+
+def cleaning(request):
+    return render(request, 'ecommerce/cleaning.html')
+
+
+def garden(request):
+    return render(request, 'ecommerce/garden.html')
+
+
+def laundry(request):
+    return render(request, 'ecommerce/laundry.html')
+
+
+def tilin(request):
+    return render(request, 'ecommerce/tilin.html')
+
+
+def carpentry(request):
+    return render(request, 'ecommerce/carpentry.html')
+
+
+def vendor_profile(request):
+    return render(request, 'ecommerce/vendor_profile.html')
+
 
 def profile(request):
     if request.session.has_key('username'):
         posts = request.session['username']
         query = User.objects.filter(username=posts)
-        return render(request, 'vendorprofile/profile.html', {"query":query})
+        return render(request, 'vendorprofile/profile.html', {"query": query})
     else:
         return render(request, 'vendorprofile/help.html', {})
 
 
-class HomeView(ListView):
-    model = Item
-    template_name = 'ecommerce/index.html'
-    paginate_by = 10
-    context_object_name = 'items'
+def vendor_options(request):
+    return render(request, 'ecommerce/vendor_options.html')
+
+
+class Vendor_option(ListView):
+    model = Quick_Service
+    template_name = 'ecommerce/vendor_options.html'
+    context_object_name = 'Quick_Service'
+
     def get_queryset(self):
-        return Item.objects.all()
+        return Quick_Service.objects.all()
 
 
-def register(request, *args, **kwargs):
-	form = UserCreationForm(request.POST or None)
-	if form.is_valid():
-		form.save()
-		return HttpReponseRedirect('/login')
-	context = {
-		'form': form
-	}
-	return render(request, "ecommerce/register.html", context)
+def accountSettings(request):
+    context = {}
+    return render(request, 'ecommerce/account_settings.html', context)
+
+
+class Vendor_Detail(DetailView):
+    model = Vendor
+    template_name = 'ecommerce/'
+
 
 def shop(request):
     return render(request, 'ecommerce/shop.html')
 
 
-def vendorprofile(request):
-    return render(request, 'ecommerce/profile2.html')
-
-def log(request):
-    return render(request, 'ecommerce/login.html')
-
 def forget(request):
     return render(request, 'ecommerce/forgot-password.html')
 
-def onTeacher(request):
-      if request.session.get('teacher'):
-         return Teacher.objects.get(emailId=request.session.get('teacher'))
-      else:
-         return None
-
-def index(request):
-    request.session.get('teacher',None)
-    teacher=onTeacher(request)
-    return render(request,'ecommerce/home.html',{"user":teacher})
-
-
-
-def login_view(request, *args, **kwargs):
-    form = UserLoginForm(request.POST or None)
-    if form.is_valid():
-        user_obj = form.cleaned_data.get('user_obj')
-        login(request, user_obj)
-        return HttpResponseRedirect("/")
-    return render(request, "ecommerce/login.html", {"form": form})
-
-
-def logout_view(request):
-    logout(request)
-    return HttpResponseRedirect("/login")
-
-
-def login(request):
-    username = request.POST['name']
-    password = request.POST['password']
-    user = authenticate(request, username=name, password=password)
-    if user is not None:
-        login(request, user)
-    else:
-        return HttpResponseRedirect('ecommerce/login.html')
-"""
-def registration2(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        FirstName = request.POST.get('FirstName')
-        LastName = request.POST.get('LastName')
-        Password1 = request.POST.get('password1')
-        Password2 = request.POST.get('password2')
-        user = User.objects.create_user(username=username,email=email,FirstName=FirstName,LastName=LastName,password1=Password1,password2=Password2)
-        user.save();
-        print('user created')
-        return redirect('/')
-    else:
-        return render(request, 'ecommerce/register.html')
-"""
-def registration(request):
-    if request.method == 'POST':
-        email = request.POST['email']
-        date_of_birth = request.POST['date_of_birth']
-        image = request.POST['image']
-        user = User.objects.create_user(email=email,date_of_birth=date_of_birth,image=image)
-        user.save();
-        print('user created')
-        return redirect('ecommerce:login')
-    else:
-        return render(request, 'ecommerce/register.html')
 
 def products(request):
     context = {
@@ -171,14 +495,6 @@ def is_valid_form(values):
             valid = False
     return valid
 
-def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-    else:
-        form = UserCreationForm()
-    return render(request, 'ecommerce/register.html', {'form': form})
 
 class CheckoutView(View):
     def get(self, *args, **kwargs):
@@ -488,8 +804,6 @@ class PaymentView(View):
         return redirect("/payment/stripe/")
 
 
-
-
 class OrderSummaryView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
         try:
@@ -504,7 +818,7 @@ class OrderSummaryView(LoginRequiredMixin, View):
 
 
 class ItemDetailView(DetailView):
-    model = Item
+    model = Product
     template_name = "ecommerce/product.html"
 
 
