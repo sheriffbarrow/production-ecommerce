@@ -20,7 +20,7 @@ entrypoints==0.3
 fasteners==0.14.1
 flake8==3.8.3
 future==0.18.2
-httplib2==0.14.0
+httplib2==0.18.0
 idna==2.8
 image==1.5.31
 keyring==18.0.1
