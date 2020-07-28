@@ -6,7 +6,7 @@
 <style type="text/css">
 </style>
 </head>
-
+{% load hitcount_tags %}
 <style media="screen">
 
     #myCarousel img {
@@ -28,10 +28,8 @@
             <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
             <li data-target="#myCarousel" data-slide-to="1"></li>
             <li data-target="#myCarousel" data-slide-to="2"></li>
-            <li data-target="#myCarousel" data-slide-to="3"></li>
-            <li data-target="#myCarousel" data-slide-to="4"></li>
-            <li data-target="#myCarousel" data-slide-to="5"></li>
-            <li data-target="#myCarousel" data-slide-to="6"></li>
+        
+
         </ol>
 
         <!-- Wrapper for slides -->
@@ -46,7 +44,8 @@
                         <img src="{{ slide.first_image.file.url }}" alt="Image">
                         <div class="carousel-caption">
                             <h2 style="color:deeppink;">{{ slide.trade_name }}</h2>
-                            <h4 style="color:linen;">{{ slide.service_description|truncatewords:15 }}</4>
+                            <h4 style="color:linen;">{{ slide.service_description|truncatewords:15 }}</h4>
+                            <div class="label-product sale">{% get_hit_count for slide %} views<span></span></div>
                         </div>
                     </a>
                 </div>

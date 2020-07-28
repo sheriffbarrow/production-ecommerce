@@ -11,17 +11,17 @@ from .views import (
     PaymentView,
     AddCouponView,
     RequestRefundView,
-    Form_view,Vendor_option,
-    Plumber,SellMessage,
-    Electrical, Laundry,Garden,Tilin,Cleaning,Carpentry,
-    ServiceDetail,ProductDetail, Shop,CarDetail,HouseDetail,
+    Form_view, Vendor_option,
+    Plumber, SellMessage,
+    Electrical, Laundry, Garden, Tilin, Cleaning, Carpentry,
+    ServiceDetail, ProductDetail, Shop, CarDetail, HouseDetail,
 )
 
 app_name = 'ecommerce'
 
 urlpatterns = [
-    path('try/', views.tr,name='try'),
-
+    path('try/', views.tr, name='try'),
+    path('admin/', views.admin, name='admin'),
     path('home/', HomeView.as_view(), name='homes'),
     path('vendor/', Vendor_option.as_view(), name='vendor_options'),
     path('tryform/', Form_view.as_view(), name='tryform'),

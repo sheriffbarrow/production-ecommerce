@@ -28,6 +28,7 @@ from django import template
 from django.template.loader import get_template
 from django.contrib import messages
 import json
+from hitcount.views import HitCountDetailView
 
 
 def create_ref_code():
@@ -59,6 +60,10 @@ def account_fitler(request):
         'items': items,
     }
     return render(request, 'account/account_settings.html', context)
+
+
+def admin(request):
+    return render(request, 'admin/base_site.html')
 
 
 def slider(request):
@@ -322,34 +327,52 @@ class Carpentry(ListView):
         return Vendor.objects.filter(category__iexact='CARPENTRY')
 
 
-class ServiceDetail(DetailView):
+class ServiceDetail(HitCountDetailView):
     model = Vendor
     template_name = 'ecommerce/plumber-detail.html'
     context_object_name = 'detail'
     pk_url_kwarg = 'vendor_pk'
+    # set to True to count the hit
+    count_hit = True
 
-    def get_queryset(self):
-        return Vendor.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super(ServiceDetail, self).get_context_data(**kwargs)
+        context.update({
+            'related_products': Vendor.objects.order_by('-hit_count_generic__hits'),
+        })
+        return context
 
 
-class CarDetail(DetailView):
+class CarDetail(HitCountDetailView):
     model = RentCar
     template_name = 'ecommerce/cardetails.html'
     context_object_name = 'cardetail'
     pk_url_kwarg = 'pk'
+    # set to True to count the hit
+    count_hit = True
 
-    def get_queryset(self):
-        return RentCar.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super(CarDetail, self).get_context_data(**kwargs)
+        context.update({
+            'related_products': RentCar.objects.order_by('-hit_count_generic__hits'),
+        })
+        return context
 
 
-class HouseDetail(DetailView):
+class HouseDetail(HitCountDetailView):
     model = RentHouse
     template_name = 'ecommerce/housedetails.html'
     context_object_name = 'housedetail'
     pk_url_kwarg = 'pk'
+    # set to True to count the hit
+    count_hit = True
 
-    def get_queryset(self):
-        return RentHouse.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super(HouseDetail, self).get_context_data(**kwargs)
+        context.update({
+            'related_products': RentHouse.objects.order_by('-hit_count_generic__hits'),
+        })
+        return context
 
 
 def send_mail(request):
@@ -399,11 +422,20 @@ def send_mail(request):
     return render(request, 'ecommerce/contact.html', {'form': Contact_Form})
 
 
-class ProductDetail(DetailView):
+class ProductDetail(HitCountDetailView):
     model = Product
     template_name = 'ecommerce/product.html'
     context_object_name = 'details'
     pk_url_kwarg = 'item_pk'
+    # set to True to count the hit
+    count_hit = True
+
+    def get_context_data(self, **kwargs):
+        context = super(ProductDetail, self).get_context_data(**kwargs)
+        context.update({
+            'related_products': Product.objects.order_by('-hit_count_generic__hits')[:3],
+        })
+        return context
 
 
 class Shop(ListView):

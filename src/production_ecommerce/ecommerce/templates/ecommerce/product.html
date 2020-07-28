@@ -1,5 +1,6 @@
 <!doctype html>
 {% extends 'ecommerce/base.html' %}
+{% load hitcount_tags %}
 {% load static %}
 {% load humanize %}
 {% block select %}
@@ -31,7 +32,6 @@
                         <li><a href="{% url 'ecommerce:home' %}">Home</a></li>
                         <li class="active"><a href="#">Product Details</a></li>
                         <li class="active"><a href="#">{{details.category}}</a></li>
-                        <li class="active"><a href="#">{{details.title}}</a></li>
                     </ul>
                 </div>
             </div>
@@ -76,6 +76,7 @@
                                 <p>Region: {{details.region}}</p>
                                 <p>Town: {{details.town}}</p>
                                 <p>Locality: {{details.locality}}</p>
+                                <p>{% get_hit_count for details %} views</p>
 
                                 <div class="pro-price mtb-30">
                                     <p class="d-flex align-items-center"><span class="prev-price">GH&#8373; {{details.previous_price|intcomma}}</span><span class="price"></span><span class="saving-price">GH&#8373; {{details.price|intcomma}}</span> - ({{details.negotiable}})</p>

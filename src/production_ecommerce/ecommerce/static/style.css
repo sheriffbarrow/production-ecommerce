@@ -43,7 +43,7 @@ Version: 1.0;
     27. About Us CSS
     28. Contact Us CSS
     29. Popup Window CSS
-    
+
 -----------------------------------------------------*/
 
 /* googel font poppins */
@@ -544,7 +544,7 @@ ul {
 
 .cart-price {
     margin: 5px 0;
-} 
+}
 
 .cart-actions a {
     background: #2c2c2c none repeat scroll 0 0;
@@ -978,7 +978,7 @@ li.megamenu-img a {
 }
 
 .nivo-directionNav a:hover i {
-    color:#C2185B; 
+    color:#C2185B;
 }
 
 .nivo-directionNav a.nivo-prevNav {
@@ -1328,9 +1328,6 @@ li.megamenu-img a {
     transition: all 300ms ease-in 0s;
 }
 
-.single-product:hover .pro-info {
-    opacity: 0;
-}
 
 .actions-secondary {
   display: -webkit-box;
@@ -1375,19 +1372,32 @@ li.megamenu-img a {
   margin-left: 5px;
   transform: scale(0.6);
 }
-.l_sale {
-  background: rgba(0, 0, 0, 0) url("img/icon/bg-l-sale.png") no-repeat scroll right center;
-  bottom: 20px;
-  color: #C2185B;
-  font-size: 20px;
+.sale {
+
+  color: white;
+  font-size: 16px;
   font-weight: 900;
   height: 22px;
-  line-height: 1;
-  padding-right: 17px;
+  line-height: 1.25em;
+  padding-right: 2px;
   position: absolute;
   right: 15px;
   text-align: center;
-  text-transform: uppercase;
+
+  z-index: 1;
+}
+.l_sale {
+
+  color: #C2185B;
+  font-size: 16px;
+  font-weight: 900;
+  height: 22px;
+  line-height: 1.25em;
+  padding-right: 2px;
+  position: absolute;
+  right: 15px;
+  text-align: center;
+
   z-index: 1;
 }
 .actions-secondary a span {
@@ -1446,7 +1456,7 @@ li.megamenu-img a {
 }
 .col-img:hover img {
   transform: scale(1.1);
- 
+
 }
 
 /*----------------------------------------*/
@@ -2792,7 +2802,7 @@ li.megamenu-img a {
   background: rgba(0, 0, 0, 0) url("img/vertical-menu/icon-expand.png") no-repeat scroll 20px 9px;
 }
 .category-menu.v-cat-menu .has-sub.open > a{
-    background: rgba(0, 0, 0, 0) url("img/vertical-menu/icon-collapse.png") no-repeat scroll 20px 9px;  
+    background: rgba(0, 0, 0, 0) url("img/vertical-menu/icon-collapse.png") no-repeat scroll 20px 9px;
 }
 /*img/vertical-menu/icon-expand.png*/
 .category-menu.v-cat-menu ul li.has-sub > a::after {
@@ -3437,7 +3447,7 @@ ul.tag-list > li > a {
 .product-description i {
   color: #666;
   font-size: 16px;
-} 
+}
 
 .product-description .compare-cart,.cart-main-area.wish-list .product-add-to-cart a {
   font-size: 13px;

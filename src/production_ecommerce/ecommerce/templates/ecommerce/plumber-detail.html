@@ -1,5 +1,6 @@
 <!doctype html>
 {% extends 'ecommerce/base.html' %}
+{% load hitcount_tags %}
 {% load static %}
 {% block select %}
 <html class="no-js" lang="zxx">
@@ -30,7 +31,6 @@
                         <li><a href="{% url 'ecommerce:home' %}">Home</a></li>
                         <li class="active"><a href="{% url 'ecommerce:vendor_options' %}">Services</a></li>
                         <li class="active"><a href="#">Service Details</a></li>
-                        <li class="active"><a href="#">{{detail.trade_name}}</a></li>
                     </ul>
                 </div>
             </div>
@@ -76,6 +76,7 @@
                                 <p>Region: {{detail.region}}</p>
                                 <p>Town: {{detail.town}}</p>
                                 <p>Locality: {{detail.locality}}</p>
+                                <p>{% get_hit_count for detail %} views</p>
                                 <div class="pro-price mtb-30">
 
                                 </div>
