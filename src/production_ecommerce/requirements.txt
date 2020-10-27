@@ -4,7 +4,7 @@ bcrypt==3.1.7
 beautifulsoup4==4.9.1
 blinker==1.4
 certifi==2019.11.28
-cryptography==2.8
+cryptography==3.2
 Django
 django-bootstrap-modal-forms==1.4.1
 django-countries==5.5
